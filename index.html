@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>字母匹配游戏 - 学习26个字母</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard', cursive, sans-serif;
+            background: linear-gradient(135deg, #ffe4ec 0%, #ffecd2 50%, #d4fc79 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #ff6b9d;
+            font-size: 2.5em;
+            text-shadow: 3px 3px 0 #fff, 5px 5px 0 rgba(255, 107, 157, 0.3);
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .game-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 100px;
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+        }
+
+        .card-area {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 25px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 0 0 5px rgba(255, 255, 255, 0.5);
+            min-width: 200px;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .area-title {
+            font-size: 1.5em;
+            color: #7c4dff;
+            margin-bottom: 10px;
+        }
+
+        .left-area {
+            border: 4px dashed #ff9a9e;
+        }
+
+        .right-area {
+            border: 4px dashed #a8e6cf;
+        }
+
+        .card {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.1), -3px -3px 10px rgba(255, 255, 255, 0.8);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.15), -5px -5px 15px rgba(255, 255, 255, 0.9);
+        }
+
+        .card:active {
+            transform: scale(0.95);
+        }
+
+        .uppercase-card {
+            color: #ff6b9d;
+            border: 3px solid #ffb6c1;
+        }
+
+        .lowercase-card {
+            color: #4ecdc4;
+            border: 3px solid #a8e6cf;
+        }
+
+        .card.selected {
+            box-shadow: 0 0 20px 5px rgba(255, 215, 0, 0.7);
+            border-color: gold;
+        }
+
+        .card.matched {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #line-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(145deg, #ffe066, #ffcc00);
+            padding: 30px 60px;
+            border-radius: 30px;
+            font-size: 2em;
+            color: #333;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            animation: pop 0.5s ease;
+            display: none;
+        }
+
+        @keyframes pop {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            70% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .emoji {
+            font-size: 1.5em;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            color: #666;
+            font-size: 1.2em;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 15px 30px;
+            border-radius: 15px;
+        }
+
+        .reset-btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 1.3em;
+            background: linear-gradient(145deg, #ff9a9e, #fecfef);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 154, 158, 0.4);
+            transition: transform 0.2s;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .reset-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Decorative elements */
+        .star {
+            position: fixed;
+            font-size: 2em;
+            animation: twinkle 2s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            .game-container {
+                gap: 50px;
+            }
+            .card-area {
+                padding: 20px;
+                min-width: 150px;
+            }
+            .card {
+                width: 80px;
+                height: 80px;
+                font-size: 2.5em;
+            }
+            .instructions {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🌟 字母匹配游戏 🌟</h1>
+    
+    <div class="game-container" id="game-container">
+        <div class="card-area left-area" id="left-area">
+            <div class="area-title">大写字母 📌</div>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="line-canvas"></canvas>
+        </div>
+        
+        <div class="card-area right-area" id="right-area">
+            <div class="area-title">小写字母 🎯</div>
+        </div>
+    </div>
+    
+    <div class="instructions" id="instructions">
+        👆 点击左边的大写字母，再点击右边匹配的小写字母来连线哦！
+    </div>
+    
+    <button class="reset-btn" onclick="startNewGame()">🔄 重新开始</button>
+    
+    <div class="message" id="message"></div>
+
+    <!-- Decorative stars -->
+    <div class="star" style="top: 10%; left: 5%;">⭐</div>
+    <div class="star" style="top: 20%; right: 8%; animation-delay: 0.5s;">🌟</div>
+    <div class="star" style="top: 60%; left: 3%; animation-delay: 1s;">✨</div>
+    <div class="star" style="bottom: 15%; right: 5%; animation-delay: 1.5s;">⭐</div>
+    <div class="star" style="bottom: 25%; left: 8%; animation-delay: 0.3s;">🌟</div>
+
+    <script>
+        // Letter pronunciation mapping (Chinese phonetic names)
+        const letterNames = {
+            'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E', 'F': 'F', 'G': 'G',
+            'H': 'H', 'I': 'I', 'J': 'J', 'K': 'K', 'L': 'L', 'M': 'M', 'N': 'N',
+            'O': 'O', 'P': 'P', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': 'T', 'U': 'U',
+            'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y', 'Z': 'Z'
+        };
+
+        // Game state
+        let currentLetters = [];
+        let connections = []; // {from: letter, to: letter, fromEl: element, toEl: element}
+        let selectedCard = null;
+        let canvas, ctx;
+        let gameContainerRect;
+
+        // Initialize game
+        function init() {
+            canvas = document.getElementById('line-canvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            startNewGame();
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            gameContainerRect = rect;
+            // Redraw connections after resize
+            drawAllConnections();
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function getRandomLetters(count) {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            const shuffled = shuffleArray(alphabet);
+            return shuffled.slice(0, count);
+        }
+
+        function speak(text, callback) {
+            // Use Web Speech API for pronunciation
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.8;
+                utterance.pitch = 1.2; // Higher pitch for child-friendly voice
+                
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                // Fallback: just call callback if provided
+                if (callback) setTimeout(callback, 500);
+            }
+        }
+
+        function createCard(letter, isUppercase, container) {
+            const card = document.createElement('div');
+            card.className = `card ${isUppercase ? 'uppercase-card' : 'lowercase-card'}`;
+            card.textContent = isUppercase ? letter : letter.toLowerCase();
+            card.dataset.letter = letter;
+            card.dataset.type = isUppercase ? 'uppercase' : 'lowercase';
+            
+            card.addEventListener('click', (e) => handleCardClick(card, e));
+            
+            container.appendChild(card);
+            return card;
+        }
+
+        function handleCardClick(card, event) {
+            event.stopPropagation();
+            
+            const letter = card.dataset.letter;
+            const type = card.dataset.type;
+            const displayLetter = type === 'uppercase' ? letter : letter.toLowerCase();
+            
+            // Speak the letter
+            const prefix = type === 'uppercase' ? '大写' : '小写';
+            speak(`${prefix} ${letterNames[letter]}`);
+            
+            // If card is already matched, ignore
+            if (card.classList.contains('matched')) {
+                return;
+            }
+            
+            // Handle selection logic
+            if (type === 'uppercase') {
+                // Selecting an uppercase card
+                if (selectedCard && selectedCard.dataset.type === 'uppercase') {
+                    // Deselect previous uppercase card
+                    selectedCard.classList.remove('selected');
+                }
+                
+                if (selectedCard === card) {
+                    // Deselect current card
+                    selectedCard.classList.remove('selected');
+                    selectedCard = null;
+                } else {
+                    // Select this uppercase card
+                    card.classList.add('selected');
+                    selectedCard = card;
+                }
+            } else {
+                // Selecting a lowercase card
+                if (selectedCard && selectedCard.dataset.type === 'uppercase') {
+                    // Create connection
+                    const upperLetter = selectedCard.dataset.letter;
+                    const lowerLetter = card.dataset.letter;
+                    
+                    // Check if uppercase card already has a connection
+                    const existingFromConnection = connections.find(c => c.from === upperLetter);
+                    if (existingFromConnection) {
+                        // Remove old connection
+                        existingFromConnection.toEl.classList.remove('matched');
+                        connections = connections.filter(c => c.from !== upperLetter);
+                    }
+                    
+                    // Check if lowercase card already has a connection
+                    const existingToConnection = connections.find(c => c.to === lowerLetter);
+                    if (existingToConnection) {
+                        // Remove old connection
+                        existingToConnection.fromEl.classList.remove('matched');
+                        connections = connections.filter(c => c.to !== lowerLetter);
+                    }
+                    
+                    // Add new connection
+                    connections.push({
+                        from: upperLetter,
+                        to: lowerLetter,
+                        fromEl: selectedCard,
+                        toEl: card
+                    });
+                    
+                    selectedCard.classList.add('matched');
+                    card.classList.add('matched');
+                    selectedCard.classList.remove('selected');
+                    selectedCard = null;
+                    
+                    drawAllConnections();
+                    
+                    // Check if all letters are connected
+                    if (connections.length === currentLetters.length) {
+                        setTimeout(validateConnections, 500);
+                    }
+                }
+            }
+        }
+
+        function getCardCenter(card) {
+            const cardRect = card.getBoundingClientRect();
+            const containerRect = document.getElementById('game-container').getBoundingClientRect();
+            
+            return {
+                x: cardRect.left + cardRect.width / 2 - containerRect.left,
+                y: cardRect.top + cardRect.height / 2 - containerRect.top
+            };
+        }
+
+        function drawAllConnections() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            connections.forEach(conn => {
+                const from = getCardCenter(conn.fromEl);
+                const to = getCardCenter(conn.toEl);
+                
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.strokeStyle = conn.isCorrect === false ? '#ff4444' : '#7c4dff';
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+                
+                // Draw X mark if incorrect
+                if (conn.isCorrect === false) {
+                    const midX = (from.x + to.x) / 2;
+                    const midY = (from.y + to.y) / 2;
+                    const size = 20;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(midX - size, midY - size);
+                    ctx.lineTo(midX + size, midY + size);
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 6;
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(midX + size, midY - size);
+                    ctx.lineTo(midX - size, midY + size);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function validateConnections() {
+            let allCorrect = true;
+            
+            connections.forEach(conn => {
+                if (conn.from === conn.to) {
+                    conn.isCorrect = true;
+                } else {
+                    conn.isCorrect = false;
+                    allCorrect = false;
+                }
+            });
+            
+            drawAllConnections();
+            
+            if (allCorrect) {
+                showMessage('🎉 太棒了！你真聪明！🎉');
+                
+                // Read out the letters after a short delay
+                setTimeout(() => {
+                    readLettersSequentially(0);
+                }, 1000);
+            } else {
+                showMessage('😅 有些连线不对哦，再试试吧！');
+                
+                setTimeout(() => {
+                    hideMessage();
+                    resetForRetry();
+                }, 2000);
+            }
+        }
+
+        function readLettersSequentially(index) {
+            if (index >= currentLetters.length) {
+                // All letters read, start new game after delay
+                setTimeout(() => {
+                    hideMessage();
+                    startNewGame();
+                }, 1500);
+                return;
+            }
+            
+            speak(letterNames[currentLetters[index]], () => {
+                setTimeout(() => {
+                    readLettersSequentially(index + 1);
+                }, 300);
+            });
+        }
+
+        function resetForRetry() {
+            // Clear connections but keep cards
+            connections = [];
+            
+            const allCards = document.querySelectorAll('.card');
+            allCards.forEach(card => {
+                card.classList.remove('matched', 'selected');
+            });
+            
+            selectedCard = null;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function showMessage(text) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.style.display = 'block';
+        }
+
+        function hideMessage() {
+            const messageEl = document.getElementById('message');
+            messageEl.style.display = 'none';
+        }
+
+        function startNewGame() {
+            // Clear previous state
+            connections = [];
+            selectedCard = null;
+            hideMessage();
+            
+            // Clear cards
+            const leftArea = document.getElementById('left-area');
+            const rightArea = document.getElementById('right-area');
+            
+            // Remove old cards but keep title
+            const leftTitle = leftArea.querySelector('.area-title');
+            const rightTitle = rightArea.querySelector('.area-title');
+            
+            leftArea.innerHTML = '';
+            rightArea.innerHTML = '';
+            
+            leftArea.appendChild(leftTitle);
+            rightArea.appendChild(rightTitle);
+            
+            // Get 3 random letters
+            currentLetters = getRandomLetters(3);
+            
+            // Create uppercase cards on the left
+            currentLetters.forEach(letter => {
+                createCard(letter, true, leftArea);
+            });
+            
+            // Shuffle and create lowercase cards on the right
+            const shuffledLetters = shuffleArray(currentLetters);
+            shuffledLetters.forEach(letter => {
+                createCard(letter, false, rightArea);
+            });
+            
+            // Clear canvas
+            setTimeout(() => {
+                resizeCanvas();
+            }, 100);
+        }
+
+        // Prevent double-tap zoom on Safari
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // Prevent pinch zoom
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('gesturechange', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('gestureend', function(e) {
+            e.preventDefault();
+        });
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
