@@ -275,7 +275,6 @@
         let connections = []; // {from: letter, to: letter, fromEl: element, toEl: element}
         let selectedCard = null;
         let canvas, ctx;
-        let gameContainerRect;
 
         // Initialize game
         function init() {
@@ -291,7 +290,6 @@
             const rect = container.getBoundingClientRect();
             canvas.width = rect.width;
             canvas.height = rect.height;
-            gameContainerRect = rect;
             // Redraw connections after resize
             drawAllConnections();
         }
@@ -592,19 +590,6 @@
             }
             lastTouchEnd = now;
         }, false);
-
-        // Prevent pinch zoom
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        });
-
-        document.addEventListener('gesturechange', function(e) {
-            e.preventDefault();
-        });
-
-        document.addEventListener('gestureend', function(e) {
-            e.preventDefault();
-        });
 
         // Initialize on load
         window.addEventListener('load', init);
