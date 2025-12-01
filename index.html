@@ -193,6 +193,12 @@
             transform: scale(0.95);
         }
 
+        .reset-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         /* Decorative elements */
         .star {
             position: fixed;
@@ -275,6 +281,9 @@
         let connections = []; // {from: letter, to: letter, fromEl: element, toEl: element}
         let selectedCard = null;
         let canvas, ctx;
+        let hadErrorThisRound = false; // 记录本轮是否出现过错误
+        let keepSameLetters = false; // 下一轮是否继续使用相同字母
+        let isReadingLetters = false; // 是否正在读字母
 
         // Initialize game
         function init() {
@@ -321,7 +330,17 @@
                 utterance.pitch = 1.2; // Higher pitch for child-friendly voice
                 
                 if (callback) {
-                    utterance.onend = callback;
+                    let callbackCalled = false;
+                    const safeCallback = () => {
+                        if (!callbackCalled) {
+                            callbackCalled = true;
+                            callback();
+                        }
+                    };
+                    utterance.onend = safeCallback;
+                    utterance.onerror = safeCallback;
+                    // Fallback timeout in case speech doesn't complete
+                    setTimeout(safeCallback, 2000);
                 }
                 
                 window.speechSynthesis.speak(utterance);
@@ -408,15 +427,38 @@
                         toEl: card
                     });
                     
+                    // 立即检查这条连线是否正确
+                    const isCorrectMatch = upperLetter === lowerLetter;
+                    
+                    if (!isCorrectMatch) {
+                        // 连线错误：显示红叉叉，1秒后消失
+                        hadErrorThisRound = true;
+                        const wrongConnection = connections[connections.length - 1];
+                        wrongConnection.isCorrect = false;
+                        drawAllConnections();
+                        
+                        // 1秒后清除错误连线
+                        setTimeout(() => {
+                            // 移除这条错误连线
+                            connections = connections.filter(c => c !== wrongConnection);
+                            // 恢复卡片状态
+                            wrongConnection.fromEl.classList.remove('matched');
+                            wrongConnection.toEl.classList.remove('matched');
+                            drawAllConnections();
+                        }, 1000);
+                    } else {
+                        // 连线正确
+                        drawAllConnections();
+                    }
+                    
                     selectedCard.classList.add('matched');
                     card.classList.add('matched');
                     selectedCard.classList.remove('selected');
                     selectedCard = null;
                     
-                    drawAllConnections();
-                    
-                    // Check if all letters are connected
-                    if (connections.length === currentLetters.length) {
+                    // Check if all letters are correctly connected
+                    const correctConnections = connections.filter(c => c.from === c.to);
+                    if (correctConnections.length === currentLetters.length) {
                         setTimeout(validateConnections, 500);
                     }
                 }
@@ -484,32 +526,41 @@
             drawAllConnections();
             
             if (allCorrect) {
-                showMessage('🎉 太棒了！你真聪明！🎉');
+                // 如果本轮出现过错误，下一轮继续使用相同字母
+                if (hadErrorThisRound) {
+                    keepSameLetters = true;
+                } else {
+                    keepSameLetters = false;
+                }
                 
-                // Read out the letters after a short delay
+                // 显示成功消息，包含3个大写字母
+                const lettersText = currentLetters.join(' ');
+                showMessage(`🎉 太棒了！${lettersText} 🎉`);
+                
+                // 禁用重新开始按钮
+                const resetBtn = document.querySelector('.reset-btn');
+                resetBtn.disabled = true;
+                isReadingLetters = true;
+                
+                // 延迟后开始读字母
                 setTimeout(() => {
                     readLettersSequentially(0);
                 }, 1000);
-            } else {
-                showMessage('😅 有些连线不对哦，再试试吧！');
-                
-                setTimeout(() => {
-                    hideMessage();
-                    resetForRetry();
-                }, 2000);
             }
         }
 
         function readLettersSequentially(index) {
             if (index >= currentLetters.length) {
-                // All letters read, start new game after delay
-                setTimeout(() => {
-                    hideMessage();
-                    startNewGame();
-                }, 1500);
+                // All letters read, immediately hide message and start new game
+                hideMessage();
+                const resetBtn = document.querySelector('.reset-btn');
+                resetBtn.disabled = false;
+                isReadingLetters = false;
+                startNewGame();
                 return;
             }
             
+            // 只读字母，不带"大写"前缀
             speak(letterNames[currentLetters[index]], () => {
                 setTimeout(() => {
                     readLettersSequentially(index + 1);
@@ -545,6 +596,7 @@
             // Clear previous state
             connections = [];
             selectedCard = null;
+            hadErrorThisRound = false; // 重置本轮错误标记
             hideMessage();
             
             // Clear cards
@@ -561,8 +613,13 @@
             leftArea.appendChild(leftTitle);
             rightArea.appendChild(rightTitle);
             
-            // Get 3 random letters
-            currentLetters = getRandomLetters(3);
+            // 根据上一轮是否出错决定是否使用新字母
+            if (!keepSameLetters) {
+                // Get 3 random letters
+                currentLetters = getRandomLetters(3);
+            }
+            // 如果keepSameLetters为true，继续使用currentLetters
+            keepSameLetters = false; // 重置标记
             
             // Create uppercase cards on the left
             currentLetters.forEach(letter => {
@@ -589,7 +646,12 @@
                 event.preventDefault();
             }
             lastTouchEnd = now;
-        }, false);
+        }, { passive: false });
+
+        // 额外防止双击缩放
+        document.addEventListener('dblclick', function(event) {
+            event.preventDefault();
+        }, { passive: false });
 
         // Initialize on load
         window.addEventListener('load', init);
