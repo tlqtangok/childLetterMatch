@@ -331,16 +331,20 @@
                 
                 if (callback) {
                     let callbackCalled = false;
+                    let timeoutId = null;
                     const safeCallback = () => {
                         if (!callbackCalled) {
                             callbackCalled = true;
+                            if (timeoutId) {
+                                clearTimeout(timeoutId);
+                            }
                             callback();
                         }
                     };
                     utterance.onend = safeCallback;
                     utterance.onerror = safeCallback;
                     // Fallback timeout in case speech doesn't complete
-                    setTimeout(safeCallback, 2000);
+                    timeoutId = setTimeout(safeCallback, 2000);
                 }
                 
                 window.speechSynthesis.speak(utterance);
@@ -429,12 +433,17 @@
                     
                     // 立即检查这条连线是否正确
                     const isCorrectMatch = upperLetter === lowerLetter;
+                    const currentSelectedCard = selectedCard;
                     
                     if (!isCorrectMatch) {
                         // 连线错误：显示红叉叉，1秒后消失
                         hadErrorThisRound = true;
                         const wrongConnection = connections[connections.length - 1];
                         wrongConnection.isCorrect = false;
+                        
+                        // 临时标记为matched用于显示连线
+                        currentSelectedCard.classList.add('matched');
+                        card.classList.add('matched');
                         drawAllConnections();
                         
                         // 1秒后清除错误连线
@@ -447,12 +456,12 @@
                             drawAllConnections();
                         }, 1000);
                     } else {
-                        // 连线正确
+                        // 连线正确：标记为matched
+                        currentSelectedCard.classList.add('matched');
+                        card.classList.add('matched');
                         drawAllConnections();
                     }
                     
-                    selectedCard.classList.add('matched');
-                    card.classList.add('matched');
                     selectedCard.classList.remove('selected');
                     selectedCard = null;
                     
@@ -651,7 +660,7 @@
         // 额外防止双击缩放
         document.addEventListener('dblclick', function(event) {
             event.preventDefault();
-        }, { passive: false });
+        });
 
         // Initialize on load
         window.addEventListener('load', init);
